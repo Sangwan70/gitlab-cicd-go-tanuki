@@ -1,0 +1,100 @@
+# This file contains a full CI/CD pipeline example for a Go project
+# - Format & Build
+# - Unit Tests
+# - Security Scanning
+image: golang:latest
+
+variables:
+  # Please edit to your GitLab project without leading 'https://'
+  REPO_NAME: gitlab.com/gitlab-de/swiss-meetup-2021-jan
+  # Env vars used by the app
+  HELLO_FROM: "our 1. Swiss GitLab meetup"
+  # Generated app name
+  BINARY_NAME: tanuki
+
+# Disabled for later exercises
+#include:
+#  template: Jobs/Code-Quality.gitlab-ci.yml
+
+# LAB: Security
+#include:
+#  - template: Secret-Detection.gitlab-ci.yml
+#  - template: Security/SAST.gitlab-ci.yml
+
+# https://docs.gitlab.com/ee/user/application_security/sast/
+#sast:
+#  stage: test
+#  variables:
+#    CI_DEBUG_TRACE: "false"
+#  artifacts:
+#    paths:
+#      - gl-sast-report.json
+#    expire_in: 1 week 
+
+# https://docs.gitlab.com/ee/user/application_security/secret_detection/
+#secret_detection:
+#  stage: test
+#  variables:
+#    SECRET_DETECTION_HISTORIC_SCAN: "true"
+#  artifacts:
+#    paths:
+#      - gl-secret-detection-report.json
+#    expire_in: 1 week 
+
+
+# The problem is that to be able to use go get, one needs to put
+# the repository in the $GOPATH. So for example if your gitlab domain
+# is gitlab.com, and that your repository is namespace/project, and
+# the default GOPATH being /go, then you'd need to have your
+# repository in /go/src/gitlab.com/namespace/project
+# Thus, making a symbolic link corrects this.
+before_script:
+  - mkdir -p $GOPATH/src/$(dirname $REPO_NAME)
+  - ln -svf $CI_PROJECT_DIR $GOPATH/src/$REPO_NAME
+  - cd $GOPATH/src/$REPO_NAME
+
+stages:
+  - format
+  - test
+  - coverage
+  - build
+  - deploy
+
+format:
+  stage: format
+  script:
+    - go fmt $(go list ./... | grep -v /vendor/)
+    - go vet $(go list ./... | grep -v /vendor/)
+
+unit-test:
+  stage: test
+  script:
+    - go test -race $(go list ./... | grep -v /vendor/)
+    - go test -cover $(go list ./... | grep -v /vendor/) # this generates the coverage report to STDOUT + regex project setting
+    - go test -coverprofile=.coverage.cov $(go list ./... | grep -v /vendor/) # this generates the output for the 'test-coverage-report' job
+  artifacts:
+    paths:
+    - .coverage.cov
+
+test-junit-report:
+  stage: coverage
+  before_script:
+    - go get -u github.com/jstemmer/go-junit-report
+  script:
+    - go test -v 2>&1 | go-junit-report -set-exit-code > report.xml
+  artifacts:
+    reports:
+      junit: report.xml
+
+compile:
+  stage: build
+  script:
+    - go build -race -ldflags "-extldflags '-static'" -o $CI_PROJECT_DIR/$BINARY_NAME
+  artifacts:
+    paths:
+      - $BINARY_NAME
+
+run:
+  stage: deploy
+  script:
+    - ./$BINARY_NAME
