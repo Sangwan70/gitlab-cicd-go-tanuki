@@ -6,9 +6,9 @@ image: golang:latest
 
 variables:
   # Please edit to your GitLab project without leading 'https://'
-  REPO_NAME: gitlab.com/gitlab-de/swiss-meetup-2021-jan
+  REPO_NAME: gitlab.com/gitlab-de/workshops/gitlab-cicd-go-tanuki-workshop
   # Env vars used by the app
-  HELLO_FROM: "our 1. Swiss GitLab meetup"
+  HELLO_FROM: "our GitLab CI/CD Go Tanuki workshop"
   # Generated app name
   BINARY_NAME: tanuki
 
