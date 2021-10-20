@@ -1,3 +1,3 @@
-module gitlab.com/gitlab-com/marketing/corporate_marketing/developer-evangelism/code/ci-community-day-2020
+module https://gitlab.com/gitlab-de/workshops/gitlab-cicd-go-tanuki-workshop
 
-go 1.14
+go 1.16
